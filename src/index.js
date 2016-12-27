@@ -1,4 +1,5 @@
-const {filterFunc, addField, filterMadLib} = require('./basic_functions.js');
+const {filterFunc, addField, filterMadLib} = require('./basic_functions.js'),
+  {splitArray, applyCombine} = require('./higher_order_functions.js');
 
 //get references to root and buttons
 var root = document.getElementById('root'),
@@ -7,14 +8,6 @@ var root = document.getElementById('root'),
   doneButton = document.getElementById('done-button'),
   highlightButton = document.getElementById('highlight-button'),
   resetButton = document.getElementById('reset-button');
-
-//higher-order functions
-let splitArray = R.curry((func, a) => {
-  return [R.filter(func, a), R.filter(R.complement(func), a) ];
-});
-let applyCombine = R.curry((func, a) => {
-  return [func(a[0]), a[1]];
-});
 
 //curried ready for compose
 //these are used in the functional steps
