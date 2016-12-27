@@ -1,45 +1,5 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <script src="nlp.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/ramda/0.22.1/ramda.min.js"></script>
-  <script src="monet.js"></script>
-  <link href="https://fonts.googleapis.com/css?family=Gentium+Book+Basic" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,800" rel="stylesheet">
-  <style>
-  body { width: 100%; margin: 0; color: #222222;}
-  .container { width: 960px; margin: 0 auto;}
-  h1 { font-family: 'Open Sans', sans-serif; font-size: 64px; line-height: 64px; margin: 0 0 32px 0; font-weight: 800; text-align: center;}
-  input { padding: 6px 12px; margin: 6px;}
+const {filterFunc, addField, filterMadLib} = require('./basic_functions.js');
 
-  .create .Noun, .create .Verb, .create .Adverb, .create .Adjective { cursor: pointer;}
-
-  .Highlight .Noun, .Noun:hover { color: #0000ff;}
-  .Highlight .Verb, .Verb:hover { color: #ff0000;}
-  .Highlight .Adjective, .Adjective:hover { color: #ff00ff;}
-  .Highlight .Adverb, .Adverb:hover { color: #00ff00;}
-
-  .Noun.MadLib, li.Nouns { color: #ffffff; background-color: #0000ff;}
-  .Verb.MadLib, li.Verbs { color: #ffffff; background-color: #ff0000;}
-  .Adjective.MadLib, li.Adjectives { color: #ffffff; background-color: #ff00ff;}
-  .Adverb.MadLib, li.Adverbs { color: #ffffff; background-color: #00ff00;}
-  body { font-family: 'Gentium Book Basic', serif; }
-  </style>
-</head>
-<body>
-<div class="container">
-  <h1>Mad Libs</h1>
-
-  <div id="root" contenteditable>
-    Somebody once told me the world is gonna roll me. I ain't the sharpest tool in the shed. She was looking kind of dumb with her finger and her thumb. In the shape of an "L" on her forehead. Hey now, you're an all-star, get your game on, go play. Hey now, you're a rock star, get the show on, get paid. And all that glitters is gold. Only shooting stars break the mold
-  </div>
-  <button id="highlight-button">Highlight</button>
-  <button id="reset-button">Reset</button>
-  <button id="create-button">Create</button>
-  <button id="enter-button">Enter</button>
-  <button id="done-button">Done</button>
-</div>
-<script>
 //get references to root and buttons
 var root = document.getElementById('root'),
   createButton = document.getElementById('create-button'),
@@ -47,13 +7,6 @@ var root = document.getElementById('root'),
   doneButton = document.getElementById('done-button'),
   highlightButton = document.getElementById('highlight-button'),
   resetButton = document.getElementById('reset-button');
-
-//basic functions
-let filterFunc = (type, term) => term.pos[type] !== undefined;
-let addField = (field, term, value) => {
-  return Object.assign({}, term, {[field]: value})
-};
-let filterMadLib = (term) => term.MadLib;
 
 //higher-order functions
 let splitArray = R.curry((func, a) => {
@@ -330,6 +283,4 @@ let s = {};
 //a hack for global state
 let dispatch = (action) => dispatchCompose(s, action)
 dispatch({type: 'init', value: {text: root.innerText, madIndexes: [], madWords: [], step: 'create', disableDone: true, highlight: ''}});
-</script>
-</body>
-</html>
+console.log('doing this');
