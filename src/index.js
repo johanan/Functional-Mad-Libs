@@ -51,7 +51,6 @@ let rootRender = render(root);
 let createRender = R.compose(rootRender, R.map(spanMap(document)), createRenderElements);
 let enterRender = R.compose(rootRender, R.map(inputMap(document)), enterRenderElements);
 let doneRender = R.compose(rootRender, R.map(spanMap(document)), doneRenderElements);
-window.e = enterRenderElements;
 
 //configure renderState
 let renderState = renderStateCurry(setAttribute('className', document.getElementsByTagName('body')[0]),
