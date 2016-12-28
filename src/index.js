@@ -1,5 +1,11 @@
-const {filterFunc, addField, filterMadLib} = require('./basic_functions.js'),
-  {splitArray, applyCombine} = require('./higher_order_functions.js');
+const {render, setAttribute} = require('./io_functions.js');
+const {spanMap, inputMap} = require('./dom_element_map_functions.js');
+const {createRenderElements, enterRenderElements, doneRenderElements} = require('./render_functions.js');
+const processStateChange = require('./fake_redux/processStateChange.js');
+const renderStateCurry = require('./fake_redux/renderState.js');
+const {onlyClass, onlyThese} = require('./event_filters.js');
+const IO = require('monet').IO;
+const R = require('ramda');
 
 //get references to root and buttons
 var root = document.getElementById('root'),
@@ -9,181 +15,22 @@ var root = document.getElementById('root'),
   highlightButton = document.getElementById('highlight-button'),
   resetButton = document.getElementById('reset-button');
 
-//curried ready for compose
-//these are used in the functional steps
-let addIndexField = R.partial(addField)(['Index']);
-let mapIndexed = R.curry(R.addIndex(R.map));
-let filterIndexed = R.curry(R.addIndex(R.filter));
-let addIndex = mapIndexed(addIndexField);
-let addMadLib = R.flip(R.curry(addField)('MadLib'))(true);
-let matchMadLib = R.curry((field, madLibArray, term) => {
-  return madLibArray.indexOf(term[field]) !== -1;
-})('Index');
-let findMadLibWord = R.curry((wordArray, mapFunc, term, idx) => {
-  let w = wordArray[idx];
-  return mapFunc(term, w);
-});
-
-//DOM mapping functions
-let spanMap = (term) => {
-  var span = document.createElement('span');
-  span.className = Object.keys(term.pos).join(" ");
-  if (term.MadLib)
-    span.className = span.className += " MadLib";
-  span.dataset.index = term.Index;
-  span.title = Object.keys(term.pos).join(" ");
-  span.innerHTML = term.whitespace.preceding + term.text + term.whitespace.trailing;
-  return span;
-};
-
-let inputMap = t => {
-  let input = document.createElement('input');
-  input.type = 'text';
-  input.placeholder = t;
-  return input;
-};
-
-//Actual functional steps
-let getTerms = R.compose(
-  R.flatten,
-  R.curry(R.map)(R.prop('terms')),
-  R.prop('sentences'),
-  nlp_compromise.text
-);
-
-let processText = R.curry((madIndexes, terms) => {
-  var process = R.compose(
-    R.curry(R.sortBy)(R.prop('Index')),
-    R.flatten,
-    applyCombine(R.map(addMadLib)),
-    splitArray(matchMadLib(madIndexes)),
-    addIndex
-  );
-  return process(terms);
-});
-
-let replaceText = R.curry((madIndexes, madWords, terms) => {
-  //prep before running replace
-  //needs to be computed each run
-  let fixedWords = R.compose(
-    R.map(R.last),
-    R.sortBy(R.nth(0))
-  )(R.zip(madIndexes, madWords));
-
-  let updateText = findMadLibWord(fixedWords, R.curry(addField)('text'));
-  let updateMadLibs = R.compose(
-    R.curry(R.sortBy)(R.prop('Index')),
-    R.flatten,
-    applyCombine(mapIndexed(updateText)),
-    splitArray(filterMadLib)
-  );
-
-  return updateMadLibs(terms);
-});
-
-//IO monad stuff
-let addChildren = (elements, root) => {
-  R.forEach((el) => {
-    root.appendChild(el);
-  }, elements);
-};
-
-let render = R.curry((root, elements) => {
-  return IO(() => {
-    while (root.firstChild) {
-        root.removeChild(root.firstChild);
-    }
-
-  addChildren(elements, root);
-  });
-});
-
-let setAttribute = R.curry((attribute, value, element) => {
-  return IO(() => {
-    element[attribute] = value;
-  });
-});
-
-let setClass = setAttribute('className');
-let setDisabled = setAttribute('disabled');
-
-//curried render to root
-let rootRender = render(root);
-//render functions
-let createRender = (indexes, text) => {
-  return R.compose(
-    rootRender,
-    R.map(spanMap),
-    processText(indexes),
-    getTerms
-  )(text);
-};
-
-let enterRender = (indexes, words, text) => {
-  return R.compose(
-    rootRender,
-    wordsToInput(words),
-    processText(indexes),
-    getTerms
-  )(text);
-};
-
-let doneRender = (indexes, words, text) => {
-  return R.compose(
-    rootRender,
-    R.map(spanMap),
-    replaceText(indexes, words),
-    processText(indexes),
-    getTerms
-  )(text);
-};
-
-let updateValue = (wordAndInput) => {
-  wordAndInput[1].value = wordAndInput[0];
-  return wordAndInput;
-}
-
-//change the indexes into input boxes
-let wordsToInput = (words) => {
-  return R.compose(
-    R.map(R.nth(1)),
-    R.map(updateValue),
-    R.zip(words),
-    R.map(inputMap),
-    R.map((p) => Object.keys(p).join(' ')),
-    R.map(R.prop('pos')),
-    R.filter(filterMadLib)
-  );
-};
-
-//helper
+//helpers for events
 let getWords = R.map(R.prop('value'));
-
-//event filter functions
-let onlyCreate = R.compose(
-  R.any(R.equals('create')),
-  R.flatten,
-  R.map(R.prop('classList')),
-  R.filter((p) => p.nodeName == 'BODY')
-);
-
-let onlyThese = R.compose(
-  R.intersection(['Noun', 'Verb', 'Adjective', 'Adverb']),
-  R.prop('classList'),
-  R.prop('target')
-);
+let onlyBodyCreate = onlyClass((p) => p.nodeName == 'BODY', 'create');
+let onlyTheseWords = onlyThese(['Noun', 'Verb', 'Adjective', 'Adverb']);
 
 //events
-document.addEventListener('click', (e) => {
+root.addEventListener('click', (e) => {
   if(e.target.nodeName === "SPAN" &&
-  onlyCreate(e.path) &&
-  onlyThese(e).length > 0){
+  onlyBodyCreate(e.path) &&
+  onlyTheseWords(e.target)){
     dispatch({type: 'indexes', value: e.target.dataset.index});
   }
 });
 
 root.addEventListener('blur', (e) => {
-  if(onlyCreate(e.path))
+  if(onlyBodyCreate(e.path))
     dispatch({type: 'text', value: root.innerText});
 });
 
@@ -199,81 +46,40 @@ document.addEventListener('keyup', (e) => {
   }
 });
 
+//curried render to root
+let rootRender = render(root);
+let createRender = R.compose(rootRender, R.map(spanMap(document)), createRenderElements);
+let enterRender = R.compose(rootRender, R.map(inputMap(document)), enterRenderElements);
+let doneRender = R.compose(rootRender, R.map(spanMap(document)), doneRenderElements);
+window.e = enterRenderElements;
+
+//configure renderState
+let renderState = renderStateCurry(setAttribute('className', document.getElementsByTagName('body')[0]),
+setAttribute('disabled', doneButton),
+createRender,
+enterRender,
+doneRender);
+
 //application state stuff
-let oldStates = [];
-
-let saveState = (state) => {
-  s = state;
-  oldStates = R.insert(oldStates.length, state, oldStates);
-}
-
-let renderState = (state) => {
-  setClass(`${state.step} ${state.highlight}`, document.getElementsByTagName('body')[0]).run();
-  setDisabled(state.disableDone, doneButton).run();
-
-  switch(state.step){
-    case 'create':
-      createRender(state.madIndexes, state.text).run();
-      break;
-    case 'enter':
-      enterRender(state.madIndexes, state.madWords, state.text).run();
-      break;
-    case 'done':
-      doneRender(state.madIndexes, state.madWords, state.text).run();
-      break;
-  }
-};
-
-//helper for processStateChange
-let addOrRemoveIndex = (array, item) => {
-  return R.contains(item, array) ? R.remove(array.indexOf(item), 1, array) : R.insert(array.length, item, array);
-}
-
-let processStateChange = (state, action) => {
-  switch(action.type){
-    case 'init':
-      return Object.assign({}, state, action.value);
-
-    case 'text':
-      return Object.assign({}, state, {text: action.value});
-
-    case 'indexes':
-      //add or remove index, reset all the words
-      //todo fix this by index
-      let indexes = R.sortBy(R.identity, addOrRemoveIndex(state.madIndexes, parseInt(action.value)));
-      let words = R.repeat('', indexes.length)
-      let disable = R.any(R.equals(''), words)
-      return Object.assign({}, state, {madIndexes: indexes, madWords: words, step: 'create', disableDone: disable});
-
-    case 'words':
-      return Object.assign({}, state, {madWords: action.value, step: 'entering',
-        disableDone: R.any(R.equals(''), action.value)});
-
-    case 'stepChange':
-      return Object.assign({}, state, {step: action.value});
-
-    case 'highlightChange':
-      return Object.assign({}, state, {highlight: state.highlight === '' ? 'Highlight' : ''});
-
-    case 'reset':
-      return Object.assign({}, state, {madIndexes: [], madWords: [], step: 'create', disableDone: true});
-
-    default:
-      return state;
-  }
+let impureStateActions = (state) => {
+  return IO(() => {
+    console.log(state);
+    s = state;
+    oldStates = R.insert(oldStates.length, state, oldStates);
+  });
 }
 
 //function for state update and render
 let dispatchCompose = R.compose(
   R.tap(renderState),
-  R.tap(saveState),
-  R.tap(console.log),
   processStateChange
 );
 
-//let's kick it off
-let s = {};
 //a hack for global state
-let dispatch = (action) => dispatchCompose(s, action)
+let dispatch = (action) => R.compose(impureStateActions, dispatchCompose)(s, action).run()
+//hack to show/not sure where to put this
+window.s = {};
+window.oldStates = [];
+window.renderState = renderState;
+//init
 dispatch({type: 'init', value: {text: root.innerText, madIndexes: [], madWords: [], step: 'create', disableDone: true, highlight: ''}});
-console.log('doing this');

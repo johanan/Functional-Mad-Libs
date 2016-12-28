@@ -20,7 +20,12 @@
   "homepage": "https://github.com/johanan/Functional-Mad-Libs#readme",
   "devDependencies": {
     "istanbul": "0.4.5",
-    "mocha": "3.2.0",
+    "mocha": "3.2.0"
+  },
+  "dependencies": {
+    "monet": "0.8.10",
+    "nlp_compromise": "6.5.3",
+    "ramda": "0.22.1",
     "webpack": "1.14.0"
   }
 }
