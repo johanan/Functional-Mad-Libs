@@ -70,7 +70,7 @@
 	root.addEventListener('click', (e) => {
 	  if(e.target.nodeName === "SPAN" &&
 	  onlyBodyCreate(e.path) &&
-	  onlyTheseWords(e).length > 0){
+	  onlyTheseWords(e.target)){
 	    dispatch({type: 'indexes', value: e.target.dataset.index});
 	  }
 	});
@@ -19925,9 +19925,10 @@
 
 	module.exports.onlyThese = (classArray) => {
 	  return R.compose(
-	   R.intersection(classArray),
-	   R.prop('classList'),
-	   R.prop('target')
+	    R.lt(0),
+	    R.prop('length'),
+	    R.intersection(classArray),
+	    R.prop('classList')
 	 );
 	}
 
